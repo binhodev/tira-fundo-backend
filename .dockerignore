@@ -1,0 +1,65 @@
+# Backend .dockerignore
+
+**pycache**/
+_.pyc
+_.pyo
+_.pyd
+.Python
+_.so
+.tox
+.coverage
+.coverage._
+.cache
+nosetests.xml
+coverage.xml
+_.cover
+\*.log
+.git
+.mypy_cache
+.pytest_cache
+.hypothesis
+
+# Virtual environments
+
+venv/
+ENV/
+env/
+.venv/
+
+# IDE
+
+.vscode/
+.idea/
+_.swp
+_.swo
+
+# OS
+
+.DS_Store
+Thumbs.db
+
+# Test files
+
+test*\*.jpg
+test*_.png
+test\__.jpeg
+
+# Backup files
+
+_.bak
+_.tmp
+
+# Local config files
+
+.env.local
+config.local.py
+
+# Cache directories
+
+cache/
+.cache/
+
+# Build artifacts
+
+build/
+dist/
