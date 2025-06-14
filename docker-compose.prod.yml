@@ -15,7 +15,7 @@ services:
             - LOG_LEVEL=info
             - SUPPRESS_PYTORCH_WARNINGS=true
             - CACHE_DIR=/app/cache
-            - MAX_FILE_SIZE=10485760 # 10MB
+            - MAX_FILE_SIZE=3145728 # 3MB
             - MAX_BATCH_SIZE=3
             - MODEL_CACHE_SIZE=2
             - CORS_ORIGINS=https://seudominio.com,https://www.seudominio.com
