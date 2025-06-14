@@ -7,13 +7,15 @@ Garantir que o PyTorch seja instalado APENAS com suporte CPU, evitando o downloa
 ## ⚠️ **Problema**
 
 Mesmo especificando `torch+cpu` no requirements.txt, o pip pode ainda baixar dependências CUDA, resultando em:
-- Downloads desnecessários (~571MB de CUDA libraries)
-- Dependências NVIDIA pesadas
-- Problemas de compatibilidade
+
+-   Downloads desnecessários (~571MB de CUDA libraries)
+-   Dependências NVIDIA pesadas
+-   Problemas de compatibilidade
 
 ## ✅ **Solução Implementada**
 
 ### **1. Dockerfile Atualizado**
+
 ```dockerfile
 # Instalar PyTorch CPU-only primeiro usando índice específico
 RUN pip install --no-cache-dir --index-url https://download.pytorch.org/whl/cpu torch torchvision && \
@@ -21,6 +23,7 @@ RUN pip install --no-cache-dir --index-url https://download.pytorch.org/whl/cpu 
 ```
 
 ### **2. Requirements.txt Limpo**
+
 ```txt
 # PyTorch CPU-only versions (use --index-url for installation)
 torch>=1.13.0
@@ -52,14 +55,15 @@ print(f"Is CPU version: {'+cpu' in torch.__version__}")  # Deve ser True
 
 ## 📦 **Vantagens**
 
-- ✅ **Tamanho reduzido**: Sem bibliotecas CUDA (~571MB economizados)
-- ✅ **Compatibilidade**: Funciona em qualquer ambiente
-- ✅ **Velocidade**: Build mais rápido do Docker
-- ✅ **Simplicidade**: Sem dependências GPU complexas
+-   ✅ **Tamanho reduzido**: Sem bibliotecas CUDA (~571MB economizados)
+-   ✅ **Compatibilidade**: Funciona em qualquer ambiente
+-   ✅ **Velocidade**: Build mais rápido do Docker
+-   ✅ **Simplicidade**: Sem dependências GPU complexas
 
 ## 🚀 **Deploy**
 
 Com essas mudanças:
+
 1. O Docker build será mais rápido
 2. Não haverá downloads de bibliotecas NVIDIA
 3. A imagem final será menor
@@ -68,6 +72,7 @@ Com essas mudanças:
 ## 🔍 **Logs Esperados**
 
 Agora você verá logs como:
+
 ```
 Looking in indexes: https://download.pytorch.org/whl/cpu
 Collecting torch>=1.13.0
@@ -75,7 +80,8 @@ Collecting torch>=1.13.0
 ```
 
 **Sem** os downloads das bibliotecas NVIDIA:
-- ❌ nvidia_cuda_nvrtc_cu12
-- ❌ nvidia_cudnn_cu12  
-- ❌ nvidia_cufft_cu12
-- ❌ nvidia_curand_cu12
+
+-   ❌ nvidia_cuda_nvrtc_cu12
+-   ❌ nvidia_cudnn_cu12
+-   ❌ nvidia_cufft_cu12
+-   ❌ nvidia_curand_cu12

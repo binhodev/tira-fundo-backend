@@ -8,6 +8,8 @@ import io
 import base64
 import time
 import logging
+import platform
+import subprocess
 from typing import Optional, Dict, Any, List
 from contextlib import asynccontextmanager
 from dotenv import load_dotenv
@@ -25,9 +27,23 @@ from transparent_background import Remover
 import warnings
 
 # Configurações específicas para produção
+# SOLUÇÃO DEFINITIVA para "could not create a primitive"
+# Configurar variáveis de ambiente ANTES de importar torch
+os.environ['DNNL_MAX_CPU_ISA'] = 'SSE41'  # Força uso de instruções SSE4.1
+os.environ['MKL_ENABLE_INSTRUCTIONS'] = 'SSE4_2'  # Limita instruções MKL
+os.environ['OPENBLAS_CORETYPE'] = 'NEHALEM'  # Usa core type compatível
+os.environ['DNNL_VERBOSE'] = '0'  # Desabilita logs verbosos
+os.environ['MKLDNN_VERBOSE'] = '0'  # Desabilita logs MKLDNN
+
 # Configurar PyTorch para ambiente de produção
 torch.set_num_threads(1)  # Limita threads para evitar conflitos em produção
 torch.set_grad_enabled(False)  # Desabilita gradientes (modo inferência)
+
+# SOLUÇÃO DEFINITIVA para "could not create a primitive"
+# Desabilitar MKL-DNN completamente (principal causa do erro)
+os.environ['TORCH_USE_MKLDNN'] = '0'
+os.environ['MKL_ENABLE_INSTRUCTIONS'] = 'SSE4_2'
+os.environ['MKL_SERVICE_FORCE_INTEL'] = '1'
 
 # Configurar OpenMP para evitar conflitos de threading
 os.environ['OMP_NUM_THREADS'] = '1'
@@ -43,10 +59,89 @@ if os.getenv("SUPPRESS_PYTORCH_WARNINGS", "true").lower() == "true":
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+def check_cpu_instructions():
+    """Verifica se a CPU tem as instruções necessárias para oneDNN"""
+    if platform.system() == "Linux":
+        try:
+            result = subprocess.run(['cat', '/proc/cpuinfo'], 
+                                  capture_output=True, text=True, timeout=5)
+            flags = result.stdout.lower()
+            
+            instructions = {
+                'sse2': 'sse2' in flags,
+                'sse4_1': 'sse4_1' in flags,
+                'avx': ' avx ' in flags or flags.endswith(' avx'),
+                'avx2': 'avx2' in flags,
+                'avx512f': 'avx512f' in flags
+            }
+            
+            logger.info("🔍 Instruções CPU detectadas:")
+            for instruction, supported in instructions.items():
+                status = "✅" if supported else "❌"
+                logger.info(f"  {status} {instruction.upper()}: {supported}")
+            
+            # Verificar se tem o mínimo necessário
+            if not instructions.get('avx2', False):
+                logger.warning("⚠️  AVX2 não suportado - configurando workarounds para oneDNN")
+                return False
+            
+            return True
+            
+        except Exception as e:
+            logger.warning(f"⚠️  Não foi possível verificar instruções CPU: {e}")
+            return None
+    
+    elif platform.system() == "Windows":
+        # No Windows, assumir que pode ter problemas e configurar defensivamente
+        logger.info("🪟 Sistema Windows detectado - aplicando configurações defensivas")
+        return False
+    
+    return None
+
+def configure_cpu_optimizations():
+    """Configura otimizações baseadas na CPU detectada"""
+    
+    # Verificar instruções CPU
+    cpu_support = check_cpu_instructions()
+    
+    if cpu_support is False:
+        # CPU sem AVX2 ou Windows - usar configurações mais compatíveis
+        logger.info("🔧 CPU sem AVX2 detectada - aplicando configurações compatíveis")
+        
+        # Desabilitar oneDNN/MKL-DNN completamente
+        os.environ['PYTORCH_DISABLE_MKLDNN'] = '1'
+        os.environ['PYTORCH_DISABLE_MKLDNN_VERBOSE'] = '1'
+        
+        # Forçar backend básico
+        os.environ['PYTORCH_DISABLE_NATIVE_EXECUTOR'] = '1'
+        
+        # Configurações adicionais para estabilidade
+        os.environ['PYTORCH_DISABLE_CUDNN'] = '1'  # Mesmo sendo CPU, evita conflitos
+        
+        logger.info("✅ Configurações de compatibilidade aplicadas")
+        
+    elif cpu_support is True:
+        # CPU com AVX2 - pode usar oneDNN mas com configurações cautelosas
+        logger.info("🚀 CPU com AVX2 detectada - configurações otimizadas")
+        
+        # Manter oneDNN mas com configurações seguras
+        os.environ['OMP_NUM_THREADS'] = '1'
+        os.environ['MKL_NUM_THREADS'] = '1'
+        
+    else:
+        # Não foi possível detectar - usar configurações intermediárias
+        logger.info("❓ CPU não detectada - usando configurações intermediárias")
+        os.environ['OMP_NUM_THREADS'] = '1'
+
 # Função lifespan para gerenciar eventos de startup/shutdown
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Startup    logger.info("🚀 Iniciando servidor de remoção de fundo...")
+    # Startup
+    logger.info("🚀 Iniciando servidor de remoção de fundo...")
+    
+    # Configurar otimizações baseadas na CPU
+    configure_cpu_optimizations()
+    
     logger.info(f"📱 Dispositivo: CPU (forçado)")
     
     # Pré-carrega o modelo base para melhor performance

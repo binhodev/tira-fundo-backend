@@ -33,7 +33,15 @@ cd tira-fundo-backend
 cp .env.example .env
 # Edite o arquivo .env conforme necessário
 
-# 3. Execute com Docker
+# 3. Instalação CPU-only (recomendado)
+# Windows:
+.\install_cpu_only.ps1
+
+# Linux/Mac:
+chmod +x install_cpu_only.sh
+./install_cpu_only.sh
+
+# 4. Execute com Docker
 docker-compose up --build
 
 # Ou use o script PowerShell (Windows)

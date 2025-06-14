@@ -21,12 +21,14 @@ Este documento descreve as mudanças implementadas para remover completamente o 
 #### 2.1. **Dockerfiles (Solução para libs NVIDIA)**
 
 **Problema**: Mesmo com `torch+cpu`, o pip baixava:
-- `nvidia_cuda_nvrtc_cu12` (~8.9MB)
-- `nvidia_cudnn_cu12` (~571MB) 
-- `nvidia_cufft_cu12` (~200MB)
-- `nvidia_curand_cu12` e outras...
+
+-   `nvidia_cuda_nvrtc_cu12` (~8.9MB)
+-   `nvidia_cudnn_cu12` (~571MB)
+-   `nvidia_cufft_cu12` (~200MB)
+-   `nvidia_curand_cu12` e outras...
 
 **Solução implementada**:
+
 ```dockerfile
 # Usar índice específico CPU-only do PyTorch
 RUN pip install --no-cache-dir --index-url https://download.pytorch.org/whl/cpu torch torchvision && \

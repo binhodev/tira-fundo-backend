@@ -43,8 +43,18 @@ else:
 "
 
 if ($LASTEXITCODE -eq 0) {
-    Write-Host "`n🎉 Instalação CPU-only concluída com sucesso!" -ForegroundColor Green
-    Write-Host "Agora você pode executar: python main.py" -ForegroundColor White
+    Write-Host "🧪 Executando teste de compatibilidade CPU..." -ForegroundColor Cyan
+    python test_cpu_compatibility.py
+    
+    if ($LASTEXITCODE -eq 0) {
+        Write-Host "`n🎉 Instalação CPU-only concluída com sucesso!" -ForegroundColor Green
+        Write-Host "✅ Teste de compatibilidade passou - sem 'primitive' errors esperados" -ForegroundColor Green
+        Write-Host "Agora você pode executar: python main.py" -ForegroundColor White
+    } else {
+        Write-Host "`n⚠️  Instalação OK, mas teste de compatibilidade falhou!" -ForegroundColor Yellow
+        Write-Host "Pode haver 'primitive' errors em CPUs sem AVX2" -ForegroundColor Yellow
+        Write-Host "Consulte: docs/cpu_instructions_check.md" -ForegroundColor White
+    }
 } else {
     Write-Host "`n❌ Problema na verificação!" -ForegroundColor Red
 }
