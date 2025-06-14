@@ -93,6 +93,42 @@ O Coolify usa Traefik que já tem rate limiting nativo, mais simples que nossa c
 3. **Configure CORS** para o domínio real do frontend
 4. **Ajuste MAX_FILE_SIZE** se necessário
 
+## 🚨 Soluções para Problemas Comuns:
+
+### **Erro de Healthcheck (unhealthy)**
+
+Se você ver o erro:
+
+```
+Healthcheck status: "unhealthy"
+/bin/sh: 1: curl: not found
+```
+
+**Solução 1 - Usar Dockerfile com curl:**
+
+-   Use o `Dockerfile` (já inclui curl)
+-   Ou use `Dockerfile.coolify` (sem healthcheck)
+
+**Solução 2 - Desabilitar healthcheck no Coolify:**
+
+1. Vá em **Settings** da aplicação
+2. **Health Check** → Desabilite
+3. Faça redeploy
+
+### **Erro de Memória/CPU**
+
+Se o container for terminado por falta de recursos:
+
+-   Reduza `WORKERS` para 1 ou 2
+-   Aumente os limites de memória no Coolify
+
+### **Erro de Timeout**
+
+Se a aplicação demora para iniciar:
+
+-   Aumente o `start_period` no healthcheck
+-   Verifique se os modelos estão sendo baixados corretamente
+
 ## 📞 Próximos Passos:
 
 1. Fazer push do código atualizado
