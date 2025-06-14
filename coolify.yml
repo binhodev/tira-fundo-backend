@@ -1,0 +1,61 @@
+# Configuração para Coolify
+# Este arquivo ajuda o Coolify a entender como fazer o deploy
+
+services:
+    backend:
+        image:
+            context: .
+            dockerfile: Dockerfile
+
+        # Recursos recomendados para VPS 8GB
+        deploy:
+            resources:
+                limits:
+                    memory: 4G
+                    cpus: "2.0"
+                reservations:
+                    memory: 2G
+                    cpus: "1.0"
+
+        # Volumes persistentes para cache dos modelos IA
+        volumes:
+            - model_cache:/app/cache
+            - app_logs:/app/logs
+
+        # Health check
+        healthcheck:
+            test:
+                [
+                    "CMD",
+                    "python",
+                    "-c",
+                    "import requests; requests.get('http://localhost:8000/health', timeout=10)",
+                ]
+            interval: 30s
+            timeout: 10s
+            retries: 3
+            start_period: 60s
+
+        # Labels para Traefik (proxy reverso do Coolify)
+        labels:
+            # Rate limiting - 1 requisição por minuto por IP
+            - "traefik.http.middlewares.ratelimit-upload.ratelimit.burst=1"
+            - "traefik.http.middlewares.ratelimit-upload.ratelimit.average=1"
+            - "traefik.http.middlewares.ratelimit-upload.ratelimit.period=60s"
+
+            # Limite de tamanho do body (3MB)
+            - "traefik.http.middlewares.limit-body.buffering.memRequestBodyBytes=3145728"
+            - "traefik.http.middlewares.limit-body.buffering.maxRequestBodyBytes=3145728"
+
+            # CORS
+            - "traefik.http.middlewares.cors.headers.accesscontrolallowmethods=GET,POST,OPTIONS"
+            - "traefik.http.middlewares.cors.headers.accesscontrolalloworigin=https://seu-frontend.com"
+            - "traefik.http.middlewares.cors.headers.accesscontrolallowheaders=Content-Type,X-Real-IP,X-API-Key"
+
+            # Aplicar middlewares às rotas específicas
+            - "traefik.http.routers.backend-upload.middlewares=ratelimit-upload,limit-body,cors"
+            - "traefik.http.routers.backend-upload.rule=PathPrefix(`/remove-background`) || PathPrefix(`/batch-remove`)"
+
+volumes:
+    model_cache:
+    app_logs:
