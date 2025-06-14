@@ -31,9 +31,8 @@ Este é um backend Python para remoção de fundo usando IA, construído com **F
     - Otimização de memória
 
 3. **Suporte a Dispositivos:**
-    - Detecção automática CUDA/CPU/MPS
-    - Otimização para GPU quando disponível
-    - Fallback gracioso para CPU
+    - Otimização para CPU apenas
+    - Configuração simplificada
 
 ## ⚡ **Pontos Fortes**
 
@@ -49,11 +48,11 @@ Este é um backend Python para remoção de fundo usando IA, construído com **F
 ## 🔧 **Configurações Destacadas**
 
 ```python
-# Configuração do dispositivo inteligente
+# Configuração do dispositivo (CPU apenas)
 device_info = {
-    "cuda_available": torch.cuda.is_available(),
-    "device_count": torch.cuda.device_count(),
-    "current_device": "cuda:0" if torch.cuda.is_available() else "cpu"
+    "cuda_available": False,
+    "device_count": 0,
+    "current_device": "cpu"
 }
 ```
 

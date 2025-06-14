@@ -10,9 +10,10 @@ ENV PYTHONUNBUFFERED=1 \
     MKL_NUM_THREADS=1 \
     NUMEXPR_NUM_THREADS=1 \
     OPENBLAS_NUM_THREADS=1 \
-    PYTORCH_CUDA_ALLOC_CONF=max_split_size_mb:512 \
     PYTORCH_JIT=0 \
-    WORKERS=1
+    WORKERS=1 \
+    FORCE_CPU=true \
+    TORCH_FORCE_CPU=1
 
 # Instalar dependências do sistema
 RUN apt-get update && apt-get install -y \

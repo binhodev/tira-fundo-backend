@@ -14,18 +14,18 @@ logger = logging.getLogger(__name__)
 
 def setup_production_environment():
     """Configura o ambiente para produção"""
-    
-    # Configurações de threading
+      # Configurações de threading
     os.environ['OMP_NUM_THREADS'] = '1'
     os.environ['MKL_NUM_THREADS'] = '1'
     os.environ['NUMEXPR_NUM_THREADS'] = '1'
     os.environ['OPENBLAS_NUM_THREADS'] = '1'
     
-    # Configurações PyTorch
-    os.environ['PYTORCH_CUDA_ALLOC_CONF'] = 'max_split_size_mb:512'
-    
     # Desabilitar JIT se necessário
     os.environ['PYTORCH_JIT'] = '0'
+    
+    # Forçar CPU apenas
+    os.environ['FORCE_CPU'] = 'true'
+    os.environ['TORCH_FORCE_CPU'] = '1'
     
     logger.info("🔧 Configurações de produção aplicadas")
     logger.info(f"🔧 OMP_NUM_THREADS: {os.environ.get('OMP_NUM_THREADS')}")

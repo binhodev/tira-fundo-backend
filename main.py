@@ -46,10 +46,8 @@ logger = logging.getLogger(__name__)
 # Função lifespan para gerenciar eventos de startup/shutdown
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Startup
-    logger.info("🚀 Iniciando servidor de remoção de fundo...")
-    logger.info(f"📱 Dispositivo: {get_device()}")
-    logger.info(f"🔧 CUDA disponível: {device_info['cuda_available']}")
+    # Startup    logger.info("🚀 Iniciando servidor de remoção de fundo...")
+    logger.info(f"📱 Dispositivo: CPU (forçado)")
     
     # Pré-carrega o modelo base para melhor performance
     try:
@@ -85,19 +83,14 @@ app.add_middleware(
 # Variáveis globais para cache dos modelos
 models_cache: Dict[str, Remover] = {}
 device_info = {
-    "cuda_available": torch.cuda.is_available(),
-    "device_count": torch.cuda.device_count() if torch.cuda.is_available() else 0,
-    "current_device": "cuda:0" if torch.cuda.is_available() else "cpu"
+    "cuda_available": False,
+    "device_count": 0,
+    "current_device": "cpu"
 }
 
 def get_device():
-    """Retorna o dispositivo disponível (CUDA ou CPU)"""
-    if torch.cuda.is_available():
-        return "cuda:0"
-    elif hasattr(torch.backends, 'mps') and torch.backends.mps.is_available():
-        return "mps:0"
-    else:
-        return "cpu"
+    """Retorna o dispositivo disponível (apenas CPU)"""
+    return "cpu"
 
 def get_or_create_model(mode: str = "base") -> Remover:
     """
@@ -108,10 +101,10 @@ def get_or_create_model(mode: str = "base") -> Remover:
         start_time = time.time()
         
         try:
-            device = get_device()
+            device = get_device()            
             logger.info(f"🔧 Configurando modelo no dispositivo: {device}")
             logger.info(f"🔧 PyTorch version: {torch.__version__}")
-            logger.info(f"🔧 CUDA available: {torch.cuda.is_available()}")
+            logger.info(f"🔧 Dispositivo: CPU (forçado)")
             
             # Configurações específicas para produção
             torch.set_num_threads(1)  # Limita threads para evitar conflitos
@@ -129,7 +122,7 @@ def get_or_create_model(mode: str = "base") -> Remover:
             logger.error(f"❌ Erro detalhado ao carregar modelo {mode}: {type(e).__name__}: {str(e)}")
             # Log de informações do sistema para debug
             logger.error(f"🔍 Sistema: device={get_device()}, torch_version={torch.__version__}")
-            logger.error(f"🔍 CUDA: available={torch.cuda.is_available()}, count={torch.cuda.device_count() if torch.cuda.is_available() else 0}")
+            logger.error(f"🔍 Dispositivo: CPU (forçado)")
             raise HTTPException(status_code=500, detail=f"Erro ao carregar modelo: {str(e)}")
     
     return models_cache[mode]
@@ -169,13 +162,12 @@ def process_image(
         except RuntimeError as e:
             if "could not create a primitive" in str(e):
                 logger.error(f"❌ Erro 'primitive' detectado: {e}")
-                logger.error("🔧 Tentando recriar o modelo...")
-                # Remove do cache e tenta recriar
+                logger.error("🔧 Tentando recriar o modelo...")                # Remove do cache e tenta recriar
                 if mode in models_cache:
                     del models_cache[mode]
-                # Força limpeza de memória
-                if torch.cuda.is_available():
-                    torch.cuda.empty_cache()
+                # Força limpeza de memória (CPU apenas)
+                import gc
+                gc.collect()
                 # Tenta novamente
                 remover = get_or_create_model(mode)
                 result = remover.process(
@@ -281,10 +273,9 @@ async def models_health_check():
                 "error": test_error
             },
             "models_cached": list(models_cache.keys()),
-            "device": get_device(),
-            "torch_info": {
+            "device": get_device(),            "torch_info": {
                 "version": torch.__version__,
-                "cuda_available": torch.cuda.is_available(),
+                "device": "cpu",
                 "num_threads": torch.get_num_threads()
             }
         }

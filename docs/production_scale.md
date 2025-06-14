@@ -7,7 +7,7 @@ Vou analisar o projeto para entender a arquitetura atual e avaliar as necessidad
 -   **Frontend:** Next.js 15 (React 19) com TypeScript
 -   **Backend:** FastAPI com Python, usando biblioteca `transparent-background`
 -   **IA:** Modelo InSPyReNet para remoção de fundo
--   **Processamento:** Suporte a CPU/CUDA/MPS
+-   **Processamento:** Suporte a CPU apenas
 -   **Comunicação:** REST API com CORS configurado
 
 ### **Recursos do Seu VPS:**

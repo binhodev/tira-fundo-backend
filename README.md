@@ -5,6 +5,7 @@ API para remoção de fundo usando IA com a biblioteca `transparent-background`.
 ## 🚀 Features
 
 -   ✅ Remoção de fundo com IA avançada (InSPyReNet)
+-   ✅ Processamento exclusivamente CPU (otimizado para compatibilidade)
 -   ✅ Suporte a processamento individual e em lote
 -   ✅ Múltiplos formatos de saída (RGBA, white, green, etc.)
 -   ✅ Configuração Docker completa
@@ -18,7 +19,6 @@ API para remoção de fundo usando IA com a biblioteca `transparent-background`.
 -   Docker 20.10+
 -   Docker Compose 2.0+
 -   4GB+ RAM (recomendado 8GB)
--   GPU opcional (CUDA/ROCm)
 
 ## 🏗️ Instalação
 
@@ -126,7 +126,7 @@ Remove o fundo de uma imagem
     "processing_time": 1250,
     "model_info": {
         "mode": "base",
-        "device": "cuda:0",
+        "device": "cpu",
         "type": "rgba",
         "processing_time_ms": 1250,
         "input_size": [1920, 1080],
@@ -265,7 +265,6 @@ docker stats
 -   6+ CPU cores
 -   16GB+ RAM
 -   100GB+ SSD
--   GPU opcional (RTX 3060+ ou equivalente)
 
 ## 🔧 Troubleshooting
 
@@ -309,9 +308,6 @@ MAX_BATCH_SIZE=3
 ### Performance baixa
 
 ```bash
-# Verificar uso de GPU
-nvidia-smi  # Se disponível
-
 # Monitorar recursos
 docker stats
 

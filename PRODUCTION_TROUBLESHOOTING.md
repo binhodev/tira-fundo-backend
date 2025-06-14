@@ -17,8 +17,8 @@ export OPENBLAS_NUM_THREADS=1
 ### 2. **Problemas de Memória**
 
 ```bash
-# Configurar alocação de memória do PyTorch
-export PYTORCH_CUDA_ALLOC_CONF=max_split_size_mb:512
+# Configurar alocação de memória do PyTorch (CPU apenas)
+export PYTORCH_JIT=0
 ```
 
 ### 3. **Problemas de JIT**
@@ -36,8 +36,9 @@ ENV OMP_NUM_THREADS=1
 ENV MKL_NUM_THREADS=1
 ENV NUMEXPR_NUM_THREADS=1
 ENV OPENBLAS_NUM_THREADS=1
-ENV PYTORCH_CUDA_ALLOC_CONF=max_split_size_mb:512
 ENV PYTORCH_JIT=0
+ENV FORCE_CPU=true
+ENV TORCH_FORCE_CPU=1
 ```
 
 ### 5. **Configuração Específica do Código**
@@ -109,7 +110,7 @@ Os logs agora incluem:
 1. Verificar logs detalhados
 2. Testar o endpoint `/health/models`
 3. Verificar versões das dependências
-4. Considerar usar CPU em vez de GPU
+4. Verificar configurações de CPU
 
 #### Versões Testadas:
 
@@ -117,18 +118,20 @@ Os logs agora incluem:
 -   transparent-background: >= 1.3.4
 -   Python: >= 3.8
 
-### 9. **Alternativas de Deployment**
+### 9. **Configuração para CPU**
 
-#### Para ambientes restritivos:
+#### Para garantir uso apenas de CPU:
 
 ```python
-# Forçar CPU
-os.environ['CUDA_VISIBLE_DEVICES'] = ''
+# Forçar CPU apenas
+os.environ['FORCE_CPU'] = 'true'
+os.environ['TORCH_FORCE_CPU'] = '1'
 ```
 
 #### Para containers com pouca memória:
 
 ```python
 # Reduzir cache de modelos
-torch.cuda.empty_cache()  # Limpar cache regularmente
+import gc
+gc.collect()  # Limpar cache regularmente
 ```
