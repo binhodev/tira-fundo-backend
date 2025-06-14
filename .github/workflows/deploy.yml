@@ -1,0 +1,189 @@
+name: Deploy to Production
+
+on:
+    push:
+        branches: [main, master]
+    pull_request:
+        branches: [main, master]
+    workflow_dispatch: # Permite execução manual
+        inputs:
+            environment:
+                description: "Ambiente para deploy"
+                required: true
+                default: "production"
+                type: choice
+                options:
+                    - development
+                    - production
+
+env:
+    REGISTRY: ghcr.io
+    IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+    # Job 1: Build e Test
+    build-and-test:
+        runs-on: ubuntu-latest
+        steps:
+            - name: 📥 Checkout code
+              uses: actions/checkout@v4
+
+            - name: 🐳 Set up Docker Buildx
+              uses: docker/setup-buildx-action@v3
+
+            - name: 🏗️ Build Docker image for testing
+              uses: docker/build-push-action@v5
+              with:
+                  context: .
+                  push: false
+                  tags: backend-test:latest
+                  cache-from: type=gha
+                  cache-to: type=gha,mode=max
+
+            - name: 🧪 Test container health
+              run: |
+                  docker run -d --name test-container -p 8000:8000 -e HOST=0.0.0.0 -e PORT=8000 backend-test:latest
+                  sleep 30
+
+                  # Testar health check
+                  if curl -f http://localhost:8000/health; then
+                    echo "✅ Health check passed"
+                  else
+                    echo "❌ Health check failed"
+                    docker logs test-container
+                    exit 1
+                  fi
+
+                  docker stop test-container
+                  docker rm test-container
+
+    # Job 2: Build e Push para Registry
+    build-and-push:
+        needs: build-and-test
+        if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+        runs-on: ubuntu-latest
+        outputs:
+            image-digest: ${{ steps.build.outputs.digest }}
+        steps:
+            - name: 📥 Checkout code
+              uses: actions/checkout@v4
+
+            - name: 🐳 Set up Docker Buildx
+              uses: docker/setup-buildx-action@v3
+
+            - name: 🔐 Log in to Container Registry
+              uses: docker/login-action@v3
+              with:
+                  registry: ${{ env.REGISTRY }}
+                  username: ${{ github.actor }}
+                  password: ${{ secrets.GITHUB_TOKEN }}
+
+            - name: 📝 Extract metadata
+              id: meta
+              uses: docker/metadata-action@v5
+              with:
+                  images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+                  tags: |
+                      type=ref,event=branch
+                      type=ref,event=pr
+                      type=sha,prefix={{branch}}-
+                      type=raw,value=latest,enable={{is_default_branch}}
+
+            - name: 🏗️ Build and push Docker image
+              id: build
+              uses: docker/build-push-action@v5
+              with:
+                  context: .
+                  push: true
+                  tags: ${{ steps.meta.outputs.tags }}
+                  labels: ${{ steps.meta.outputs.labels }}
+                  cache-from: type=gha
+                  cache-to: type=gha,mode=max
+
+    # Job 3: Deploy para VPS
+    deploy:
+        needs: [build-and-test, build-and-push]
+        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' || github.event_name == 'workflow_dispatch'
+        runs-on: ubuntu-latest
+        environment: production
+        steps:
+            - name: 📥 Checkout code
+              uses: actions/checkout@v4
+
+            - name: 🚀 Deploy to VPS
+              uses: appleboy/ssh-action@v1.0.0
+              with:
+                  host: ${{ secrets.VPS_HOST }}
+                  username: ${{ secrets.VPS_USERNAME }}
+                  key: ${{ secrets.VPS_PRIVATE_KEY }}
+                  port: ${{ secrets.VPS_PORT || 22 }}
+                  script: |
+                      # Navegar para o diretório do projeto
+                      cd ${{ secrets.DEPLOY_PATH || '/opt/tira-fundo-backend' }}
+
+                      # Fazer backup do .env atual
+                      if [ -f .env ]; then
+                        cp .env .env.backup
+                      fi
+
+                      # Pull da imagem mais recente
+                      echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
+                      # Parar containers antigos
+                      docker-compose -f docker-compose.prod.yml down || true
+
+                      # Pull do código mais recente (se necessário)
+                      git pull origin main || git pull origin master
+
+                      # Restaurar .env
+                      if [ -f .env.backup ]; then
+                        cp .env.backup .env
+                      fi
+
+                      # Pull da nova imagem
+                      docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+
+                      # Atualizar docker-compose para usar a imagem do registry
+                      sed -i 's|build:|# build:|g' docker-compose.prod.yml
+                      sed -i 's|context: .|# context: .|g' docker-compose.prod.yml
+                      sed -i 's|dockerfile: Dockerfile|# dockerfile: Dockerfile|g' docker-compose.prod.yml
+                      sed -i "/container_name: removal-bg-backend/i\\        image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest" docker-compose.prod.yml
+
+                      # Iniciar containers
+                      docker-compose -f docker-compose.prod.yml up -d
+
+                      # Aguardar containers ficarem saudáveis
+                      sleep 30
+
+                      # Verificar health check
+                      if curl -f http://localhost/health; then
+                        echo "✅ Deploy realizado com sucesso!"
+                        
+                        # Limpar imagens antigas
+                        docker image prune -f
+                      else
+                        echo "❌ Deploy falhou - rollback"
+                        docker-compose -f docker-compose.prod.yml logs
+                        exit 1
+                      fi
+
+    # Job 4: Notificação de Deploy
+    notify:
+        needs: [deploy]
+        if: always()
+        runs-on: ubuntu-latest
+        steps:
+            - name: 📢 Notify deployment status
+              uses: 8398a7/action-slack@v3
+              if: always()
+              with:
+                  status: ${{ job.status }}
+                  channel: "#deployments"
+                  text: |
+                      🚀 Deploy Status: ${{ job.status }}
+                      📦 Repository: ${{ github.repository }}
+                      🌿 Branch: ${{ github.ref_name }}
+                      👤 Actor: ${{ github.actor }}
+                      🔗 Commit: ${{ github.sha }}
+              env:
+                  SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}

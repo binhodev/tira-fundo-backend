@@ -22,11 +22,45 @@ API para remoção de fundo usando IA com a biblioteca `transparent-background`.
 
 ## 🏗️ Instalação
 
-### Desenvolvimento Local
+### 🚀 Deploy Simples do GitHub (Recomendado)
+
+**Abordagem direta e sem complicações:**
+
+1. **Gere um token do GitHub:**
+
+    - GitHub → Settings → Developer Settings → Personal Access Tokens
+    - Crie token com permissão `repo`
+
+2. **No seu servidor:**
+
+```bash
+# Baixe o script de deploy
+wget https://raw.githubusercontent.com/SEU_USUARIO/tira-fundo-backend/main/deploy-simple.sh
+chmod +x deploy-simple.sh
+
+# Edite as configurações
+nano deploy-simple.sh
+# Altere: GITHUB_REPO="https://SEU_TOKEN@github.com/SEU_USUARIO/tira-fundo-backend.git"
+
+# Execute o deploy
+sudo ./deploy-simple.sh
+```
+
+3. **Para atualizações futuras:**
+
+```bash
+# Simplesmente execute novamente após fazer push
+sudo ./deploy-simple.sh
+```
+
+📖 **Guia completo:** `docs/deploy-simples.md`  
+⚡ **Início rápido:** `docs/inicio-rapido.md`
+
+### 🐳 Desenvolvimento Local
 
 ```bash
 # 1. Clone o repositório
-git clone <url-do-repo>
+git clone https://github.com/SEU_USUARIO/tira-fundo-backend.git
 cd tira-fundo-backend
 
 # 2. Configure o ambiente
@@ -44,7 +78,7 @@ chmod +x deploy.sh
 ./deploy.sh
 ```
 
-### Produção
+### 🔧 Deploy Manual em Produção
 
 ```bash
 # 1. Configure o ambiente de produção

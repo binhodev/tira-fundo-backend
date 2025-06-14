@@ -1,0 +1,74 @@
+# Configuração para Deploy no Coolify
+# Arquivo de configuração para plataforma Coolify
+
+# ==== INFORMAÇÕES BÁSICAS ====
+app_name: tira-fundo-backend
+description: "API de remoção de fundo com IA usando FastAPI"
+type: docker-compose
+
+# ==== CONFIGURAÇÕES DO REPOSITÓRIO ====
+# Para repositório privado no GitHub
+repository:
+    type: github
+    url: https://github.com/SEU_USUARIO/tira-fundo-backend
+    branch: main
+    # Para repo privado, configure as credenciais no Coolify
+    private: true
+
+# ==== CONFIGURAÇÕES DE BUILD ====
+build:
+    dockerfile: Dockerfile
+    context: .
+    args:
+        - PYTHON_VERSION=3.11
+
+# ==== CONFIGURAÇÕES DE DEPLOY ====
+deploy:
+    compose_file: docker-compose.prod.yml
+    env_file: .env.production
+
+    # Pré-comandos antes do deploy
+    pre_deploy:
+        - mkdir -p ssl logs
+        - chmod +x scripts/deploy-webhook.sh
+
+    # Pós-comandos após o deploy
+    post_deploy:
+        - docker image prune -f
+        - curl -f http://localhost/health || exit 1
+
+# ==== CONFIGURAÇÕES DE REDE ====
+network:
+    port: 80
+    ssl: true
+    domain: seu-dominio.com
+
+# ==== CONFIGURAÇÕES DE RECURSOS ====
+resources:
+    memory: 4Gi
+    cpu: 2
+    replicas: 1
+
+# ==== VARIÁVEIS DE AMBIENTE OBRIGATÓRIAS ====
+# Configure estas no painel do Coolify
+required_env_vars:
+    - CORS_ORIGINS
+    - HOST
+    - PORT
+    - WORKERS
+    - LOG_LEVEL
+
+# ==== CONFIGURAÇÕES DE MONITORAMENTO ====
+health_check:
+    endpoint: /health
+    interval: 30s
+    timeout: 10s
+    retries: 3
+
+# ==== CONFIGURAÇÕES DE BACKUP ====
+backup:
+    enabled: true
+    schedule: "0 2 * * *" # Todo dia às 2h
+    paths:
+        - ./logs
+        - ./.env
