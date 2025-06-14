@@ -14,8 +14,24 @@ Este documento descreve as mudanças implementadas para remover completamente o 
 
 #### 2. **requirements.txt**
 
--   ✅ `torch>=1.13.0+cpu` - Versão CPU-only
--   ✅ `torchvision>=0.14.0+cpu` - Versão CPU-only
+-   ✅ `torch>=1.13.0` - Versão CPU-only (instalada via índice específico)
+-   ✅ `torchvision>=0.14.0` - Versão CPU-only (instalada via índice específico)
+-   ❌ **Problema identificado**: Sufixo `+cpu` não evita download de libs NVIDIA
+
+#### 2.1. **Dockerfiles (Solução para libs NVIDIA)**
+
+**Problema**: Mesmo com `torch+cpu`, o pip baixava:
+- `nvidia_cuda_nvrtc_cu12` (~8.9MB)
+- `nvidia_cudnn_cu12` (~571MB) 
+- `nvidia_cufft_cu12` (~200MB)
+- `nvidia_curand_cu12` e outras...
+
+**Solução implementada**:
+```dockerfile
+# Usar índice específico CPU-only do PyTorch
+RUN pip install --no-cache-dir --index-url https://download.pytorch.org/whl/cpu torch torchvision && \
+    pip install --no-cache-dir -r requirements.txt
+```
 
 #### 3. **Dockerfile.coolify**
 
